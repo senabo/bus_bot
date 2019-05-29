@@ -86,7 +86,7 @@ def get_message():
 def index():
     bot.remove_webhook()
     bot.set_webhook(url="https://{}.herokuapp.com/{}".format(app_name, token))
-    return "Hello from Heroku! Bot is working", 200
+    return "Hello from Heroku! Bot is working!", 200
 
 
 if __name__ == '__main__':

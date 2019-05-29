@@ -10,7 +10,6 @@ def get_time():
     tzkiev = pytz.timezone('Europe/Kiev')
     utc = datetime.now(tzkiev).astimezone(tzkiev)
     now =  str(utc.time()).split(':')
-
     return (float(now[0]+'.'+now[1]))
 
 
@@ -22,15 +21,20 @@ def get_html(url):
 
 # Парсинг html коду, отримання словника, де ключ-час відправлення, а значення-назва маршруту.
 def get_data(html):
+    # Додати в словник графік автобуса ʼТязівʼ
+    dicti = {'6.45': 'Тязів', '7.15': 'Тязів'}
+    n = 8
+    while '19.30' not in [*dicti]:
+        if n == 11 or n == 12:
+            n += 1
+            continue
+        dicti[str(n) + '.30'] = 'Тязів'
+        n += 1
+
+    # Парсинг сайту автостанції
     soup = BeautifulSoup(html, 'lxml')
     trs = soup.find('table', class_='tbl_afisha').find('tbody').find_all('tr')
-    
-    dicti = {'6.45':'Тязів', '7.15':'Тязів'}
-    # n = 8.30
-    # while '19.30' not in dicti:
-    #     dicti[str(n)]='Тязів'
-    #     n+=1
-    #
+
     for tr in trs:
         tds = tr.find_all('td')
         time = tds[1].text.strip()
@@ -51,7 +55,6 @@ def get_data(html):
         else:
             dicti[time] = name
 
-    # print(dicti)
     return dicti
 
 
@@ -73,6 +76,7 @@ def number_bus(n, chat_id):
 
 
 numb = '5'
+
 def get_number_bus(chat_id):
 
     f = open('numb_bus.txt')
@@ -86,6 +90,7 @@ def get_number_bus(chat_id):
 
     f.close()
 
+
 # Отримання автобусів, відповідно до заданого часу.
 def return_time(dicti, time):
     # Створення списку з часом відправлення + додаємо свій час
@@ -94,27 +99,31 @@ def return_time(dicti, time):
     for i in [*dicti]:
         list_time.append(float(i))
 
-
     list_time.append(time)
+
     # Сортування списка, отримання індекса нашого часу
     list_time.sort()
     index = list_time.index(time)
 
-    # Отримання списку потрібних автобусів
+    # Виключаємо автобуси які їдуть в ту саму хвилину коли робимо запит
+    if format(time,'.2f') in [*dicti]:
+        index+=1
 
+    # Отримання списку потрібних автобусів
     result = []
     global numb
     try:
-        list_time[index + 1] # Перевірка якщо наш час пізніший останнього маршрута
+        list_time[index + 1] # Перевіряємо чи час запиту пізніший за час останнього маршрута
 
-        a = list_time[(index + 1): (index + (int(numb)+1))]
+        a = list_time[(index + 1): (index + int(numb)+1)]
 
         for i in a:
             result.append(format(i, '.2f'))
         return result
 
     except IndexError:
-        a = list_time[0: int(numb) - 1]
+        a = list_time[0: int(numb)]
+
         for i in a:
             result.append(format(i, '.2f'))
         return result
@@ -136,6 +145,7 @@ def shedule():
     t = return_time((d), get_time())
 
     return (final_result(t, d))
+
 
 if __name__ == '__main__':
     shedule()
