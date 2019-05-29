@@ -1,0 +1,7 @@
+pyTelegramBotAPI
+flask
+bs4
+lxml
+requests
+gunicorn
+pytz
