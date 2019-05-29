@@ -8,9 +8,10 @@ from datetime import datetime
 # Отримання актуального часу в UTC за Києвом.
 def get_time():
     tzkiev = pytz.timezone('Europe/Kiev')
-    now = datetime.now(tzkiev)
-    utc = now.astimezone(tzkiev)
-    return ("%d" % utc.hour + '.' + "%d" % utc.minute)
+    utc = datetime.now(tzkiev).astimezone(tzkiev)
+    now =  str(utc.time()).split(':')
+
+    return (float(now[0]+'.'+now[1]))
 
 
 # Отримання html коду для парсинга.
@@ -23,13 +24,19 @@ def get_html(url):
 def get_data(html):
     soup = BeautifulSoup(html, 'lxml')
     trs = soup.find('table', class_='tbl_afisha').find('tbody').find_all('tr')
-    dicti = {}
+    
+    dicti = {'6.45':'Тязів', '7.15':'Тязів'}
+    # n = 8.30
+    # while '19.30' not in dicti:
+    #     dicti[str(n)]='Тязів'
+    #     n+=1
+    #
     for tr in trs:
         tds = tr.find_all('td')
         time = tds[1].text.strip()
         name = tds[2].text.strip()
 
-        banlist = ['Павлівка', 'Височанка', 'Рибне', 'Клузів', 'ІКлузів', 'Майдан']
+        banlist = ['Павлівка', 'Височанка', 'Рибне', 'Клузів', 'ІКлузів', 'Майдан', 'Тязів']
 
         # Пропуск непотрібних маршрутів
         if name in banlist:
@@ -44,6 +51,7 @@ def get_data(html):
         else:
             dicti[time] = name
 
+    # print(dicti)
     return dicti
 
 
@@ -58,7 +66,6 @@ def number_bus(n, chat_id):
             f = open('numb_bus.txt', 'w')
             f.write(fi)
             f.close()
-    # f.close()
 
     f = open('numb_bus.txt', 'a')
     f.write(str(chat_id) + ',' + n + '\n')
@@ -80,14 +87,14 @@ def get_number_bus(chat_id):
     f.close()
 
 # Отримання автобусів, відповідно до заданого часу.
-def return_time(dicti, t):
+def return_time(dicti, time):
     # Створення списку з часом відправлення + додаємо свій час
     list_time = []
 
     for i in [*dicti]:
         list_time.append(float(i))
 
-    time = float(t)
+
     list_time.append(time)
     # Сортування списка, отримання індекса нашого часу
     list_time.sort()
@@ -129,7 +136,6 @@ def shedule():
     t = return_time((d), get_time())
 
     return (final_result(t, d))
-
 
 if __name__ == '__main__':
     shedule()
