@@ -24,7 +24,7 @@ def get_data(html):
     # Додати в словник графік автобуса ʼТязівʼ
     dicti = {'6.45': 'Тязів', '7.15': 'Тязів'}
     n = 8
-    while '19.30' not in [*dicti]:
+    while '18.30' not in [*dicti]:
         if n == 11 or n == 12:
             n += 1
             continue
