@@ -1,6 +1,6 @@
 from flask import Flask
 from flask import request
-import pars
+import get_shadule as data
 import telebot
 import os
 
@@ -12,9 +12,10 @@ bot = telebot.TeleBot(token, threaded=False)
 server = Flask(__name__)
 
 
-#Головна кнопка
+#Головні кнопки
 keyboard = telebot.types.ReplyKeyboardMarkup(True)
 keyboard.row('В ТЯЗІВ  ✈️')
+keyboard.row('В ФРАНКІВСЬК  🚀')
 
 
 # Inline нопка "налаштування"
@@ -25,7 +26,7 @@ keyboard3.add(call_b)
 
 # Клавіатура для вибору кількості автобусів
 keyboard2 = telebot.types.InlineKeyboardMarkup()
-for i in range(1,6):
+for i in range(1,9):
     cal_but = telebot.types.InlineKeyboardButton(text=str(i), callback_data=str(i))
     keyboard2.add(cal_but)
 
@@ -33,13 +34,13 @@ for i in range(1,6):
 # Реакція на команду '/start'
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.send_message(chat_id=message.chat.id, text='Привіт, ' + message.from_user.first_name + '. ' + 'Щоб отримати розклад автобусів натисніть кнопку ⬇️', reply_markup=keyboard)
+    bot.send_message(chat_id=message.chat.id, text='Привіт, ' + message.from_user.first_name + '. ' + 'Щоб отримати розклад автобусів натисніть кнопку, куди Ви їдете ⬇️', reply_markup=keyboard)
 
 
 # Реакція на команду '/help'
 @bot.message_handler(commands=['help'])
 def start(message):
-    bot.send_message(chat_id=message.chat.id, text='Бот показує розклад автобусів найближчих по часу відправлення в Тязів. Для початку роботи натисніть /start')
+    bot.send_message(chat_id=message.chat.id, text='Бот показує розклад автобусів найближчих по часу відправлення в Тязів з Івано-Франківська або навпаки. Показаний графік може бути не точним. Для початку роботи натисніть /start')
 
 
 # Обробка отриманого повідомлення
@@ -47,9 +48,15 @@ def start(message):
 def send_shedule(message):
     if message.text is not None:
 
+        data.last_message(message.text,message.chat.id)
+
         if '✈️' in message.text:
-            pars.get_number_bus(message.chat.id)
-            bot.send_message(chat_id=message.chat.id, text='*'+pars.shedule()+'*', reply_markup=keyboard3, parse_mode='Markdown')
+            data.get_number_bus(message.chat.id)
+            bot.send_message(chat_id=message.chat.id, text='*'+data.in_tiaziv()+'*', reply_markup=keyboard3, parse_mode='Markdown')
+
+        elif '🚀' in message.text:
+            data.get_number_bus(message.chat.id)
+            bot.send_message(chat_id=message.chat.id, text='*'+data.in_frankivsk()+'*', reply_markup=keyboard3, parse_mode='Markdown')
 
         else:
             bot.send_sticker(chat_id=message.chat.id, data='CAADAgAD5QEAAnELQgVO8tCPFPdaDgI')
@@ -65,12 +72,15 @@ def callback_inline(call):
     if call.data == 'Налаштування':
         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Виберіть скільки автобусів показувати:', reply_markup=keyboard2)
 
-    elif int(call.data) in range(1,6):
+    elif int(call.data) in range(1,9):
         # Відправка числа  для задання кількості відображених автобусів
-        pars.number_bus(call.data, call.message.chat.id)
-        pars.get_number_bus(call.message.chat.id)
+        data.number_bus(call.data, call.message.chat.id)
+        data.get_number_bus(call.message.chat.id)
 
-        bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="*" + pars.shedule() +'*', parse_mode='Markdown', reply_markup=keyboard3)
+        if '✈️' in data.get_last_mes(call.message.chat.id) :
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="*" + data.in_tiaziv() +'*', parse_mode='Markdown', reply_markup=keyboard3)
+        elif ' 🚀' in data.get_last_mes(call.message.chat.id) :
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,text="*" + data.in_frankivsk() + '*', parse_mode='Markdown', reply_markup=keyboard3)
 
 
 # Обробка POST запиту

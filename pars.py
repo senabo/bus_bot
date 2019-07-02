@@ -1,16 +1,8 @@
 from bs4 import BeautifulSoup
 import requests
+import csv
 import datetime
-import pytz
 from datetime import datetime
-
-
-# Отримання актуального часу в UTC за Києвом.
-def get_time():
-    tzkiev = pytz.timezone('Europe/Kiev')
-    utc = datetime.now(tzkiev).astimezone(tzkiev)
-    now =  str(utc.time()).split(':')
-    return (float(now[0]+'.'+now[1]))
 
 
 # Отримання html коду для парсинга.
@@ -19,25 +11,68 @@ def get_html(url):
     return r.text
 
 
-# Парсинг html коду, отримання словника, де ключ-час відправлення, а значення-назва маршруту.
+#Записуємо графік автобусів ʼз Франківськаʼ в csv файл
+def from_if_csv(data):
+    with open('from_if.csv', 'a') as f:
+        writer = csv.writer(f)
+
+        writer.writerow([data['time'],
+                         data['name']])
+
+
+#Записуємо графік автобусів ʼз Тязеваʼ в csv файл
+def from_tiaziv_csv(data):
+    with open('from_tiaziv.csv', 'a') as f:
+        writer = csv.writer(f)
+
+        writer.writerow([data['time2'],
+                         data['name']])
+
+
+# Парсинг html коду
 def get_data(html):
+
     # Додати в словник графік автобуса ʼТязівʼ
-    dicti = {'6.45': 'Тязів', '7.15': 'Тязів'}
+    tzv = {}
     n = 8
-    while '18.30' not in [*dicti]:
+    while tzv.get('time') != '18.30' :
         if n == 11 or n == 12:
             n += 1
             continue
-        dicti[str(n) + '.30'] = 'Тязів'
+        tzv = {'time':(str(n) + '.30'),
+               'name':'Тязів'}
+        from_if_csv(tzv)
+        n += 1
+
+    tzv2 = {}
+    n = 9
+    while tzv2.get('time2') != '19.00':
+        if n == 12 or n == 13:
+            n += 1
+            continue
+        tzv2 = {'time2': (str(n) + '.00'),
+               'name': 'Тязів'}
+        from_tiaziv_csv(tzv2)
         n += 1
 
     # Парсинг сайту автостанції
     soup = BeautifulSoup(html, 'lxml')
     trs = soup.find('table', class_='tbl_afisha').find('tbody').find_all('tr')
-
+#
     for tr in trs:
         tds = tr.find_all('td')
         time = tds[1].text.strip()
+
+        time2 = tds[0].text.strip()
+
+        # Віднімаємо від отриманого значення 20 хв
+        time2 = time2.split('.')
+        date_object = datetime.strptime(time2[0] + ':' + time2[1], '%H:%M')
+        minut = datetime.strptime('20', '%M')
+        time2 = (date_object - minut)
+        time2 = (str(time2).split(':'))
+        time2 = time2[0]+'.'+time2[1]
+
         name = tds[2].text.strip()
 
         banlist = ['Павлівка', 'Височанка', 'Рибне', 'Клузів', 'ІКлузів', 'Майдан', 'Тязів']
@@ -46,106 +81,26 @@ def get_data(html):
         if name in banlist:
             continue
 
-        # Запис кількох маршрутів під один ключ, якщо час відправлення однаковий
-        elif time in [*dicti]:
-            l = dicti[time] + ' ◾️ ' + name
-            dicti[time] = l
-
         # Звичайний запис маршрутів
         else:
-            dicti[time] = name
+            dicti = {'time':time,
+                     'name':name}
 
-    return dicti
+            dicti2 = {'time2':time2,
+                     'name':name}
 
-
-# Отримання кількості автобусів для відображення.
-def number_bus(n, chat_id):
-    f = open('numb_bus.txt')
-    for line in f:
-        if str(chat_id) in line:
-            f = open('numb_bus.txt').read()
-            fi = f.replace(line, '')
-
-            f = open('numb_bus.txt', 'w')
-            f.write(fi)
-            f.close()
-
-    f = open('numb_bus.txt', 'a')
-    f.write(str(chat_id) + ',' + n + '\n')
-    f.close()
+        from_if_csv(dicti)
+        from_tiaziv_csv(dicti2)
 
 
-numb = '5'
-
-def get_number_bus(chat_id):
-
-    f = open('numb_bus.txt')
-    global numb
-    for line in f:
-        if str(chat_id) in line:
-            numb = (line.split(',')[1])
-
-        elif 'test' in line:
-            numb = (line.split(',')[1])
-
-    f.close()
-
-
-# Отримання автобусів, відповідно до заданого часу.
-def return_time(dicti, time):
-    # Створення списку з часом відправлення + додаємо свій час
-    list_time = []
-
-    for i in [*dicti]:
-        list_time.append(float(i))
-
-    list_time.append(time)
-
-    # Сортування списка, отримання індекса нашого часу
-    list_time.sort()
-    index = list_time.index(time)
-
-    # Виключаємо автобуси які їдуть в ту саму хвилину коли робимо запит
-    if format(time,'.2f') in [*dicti]:
-        index+=1
-
-    # Отримання списку потрібних автобусів
-    result = []
-    global numb
-    try:
-        list_time[index + 1] # Перевіряємо чи час запиту пізніший за час останнього маршрута
-
-        a = list_time[(index + 1): (index + int(numb)+1)]
-
-        for i in a:
-            result.append(format(i, '.2f'))
-        return result
-
-    except IndexError:
-        a = list_time[0: int(numb)]
-
-        for i in a:
-            result.append(format(i, '.2f'))
-        return result
-
-
-# Форматування списка з маршрутами для відправлення користувачу
-def final_result(t, d):
-    text = ''
-    t.reverse()
-    for i in t:
-        text = ('🕖  ' + i + ' ➖ ' + d[i]) + '\n\n' + text
-    return text
-
-
-# Фінальний результат
-def shedule():
+def main():
     url = 'http://page.if.ua/article/20/'
-    d = get_data(get_html(url))
-    t = return_time((d), get_time())
+    get_data(get_html(url))
 
-    return (final_result(t, d))
-
+#     d = get_data(get_html(url))
+#     t = return_time((d), get_time())
+#
+#     return (final_result(t, d))
 
 if __name__ == '__main__':
-    shedule()
+    main()
